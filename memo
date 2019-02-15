@@ -4,3 +4,10 @@ go fmt ./...&&go test ./tests/... -v
 
 
 GOOS=js GOARCH=wasm go build -o build/main.wasm
+
+
+go fmt ./...&&go run main/basicws_server.go
+go fmt ./...&&go run main/basicws_client.go
+
+go fmt ./...&&go run main/logwatcher_server.go
+go fmt ./...&&go run main/logwatcher_client.go

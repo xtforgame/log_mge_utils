@@ -15,22 +15,15 @@ type Writer interface {
 
 type Readable interface {
 	Stream
-	GetOwner() Writer
 	GetLastEOFPos() (n int64)
 	GetCurrentPos() (n int64)
 }
 
 type EventCallback func(event *LoggerEvent)
 
-type Listener interface {
-	Readable
-	StartRestore() error
-	Receive(event *LoggerEvent)
-	OnEvent(eventCallback EventCallback)
-}
-
 type SReader interface {
 	Readable
+	GetOwner() Writer
 	Read(p []byte) (n int, err error)
 	ReloadAndRead(p []byte) (n int, err error)
 	Seek(off int64, whence int) (ret int64, err error)
@@ -50,4 +43,20 @@ type LogBuffer interface {
 	ReadableWriter
 	GetOffset() (offset int64)
 	Forget(offset int64) (newOffset int64)
+}
+
+type Logger interface {
+	Writer
+	CreateListener(options interface{}) (Listener, error)
+	GetStreamSize() int64
+}
+
+type Listener interface {
+	Readable
+	GetOwner() Logger
+	Restore() error
+	Listen()
+	Unlisten()
+	Receive(event *LoggerEvent)
+	OnEvent(eventCallback EventCallback)
 }

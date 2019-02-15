@@ -38,42 +38,42 @@ func TestLocalFsWrite2(t *testing.T) {
 	ls, _ := NewLocalFsStorer(localFsTestFolder)
 	defer ls.Close()
 
+	AssertInt64Equal := func(varName string, _var int64, expectedVal int64, err error) {
+		if _var != expectedVal {
+			t.Log("err:", err)
+			t.Fatal("expect "+varName+": ", expectedVal, ", actual:", _var)
+		}
+	}
+
+	AssertIntEqual := func(varName string, _var int, expectedVal int, err error) {
+		if _var != expectedVal {
+			t.Log("err:", err)
+			t.Fatal("expect "+varName+": ", expectedVal, ", actual:", _var)
+		}
+	}
+
 	ls.Write([]byte("dfdbbdbt\n"))
 	reader, _ := ls.CreateReader()
 	var b = make([]byte, 20)
 	s, err := reader.Seek(3, io.SeekStart)
-	if s != 3 {
-		t.Log("s:", s)
-		t.Log("err:", err)
-		t.Fatal("s != 3")
-	}
+	AssertInt64Equal("seek", s, 3, err)
+
 	c, err := reader.Seek(0, io.SeekCurrent)
-	if c != 3 {
-		t.Fatal("c != 3")
-	}
+	AssertInt64Equal("current", c, 3, err)
+
 	n, err := reader.Read(b)
-	if n != 6 {
-		t.Log("n:", n)
-		t.Log("err:", err)
-		t.Fatal("n != 6")
-	}
+	AssertIntEqual("current", n, 6, err)
+
 	n, err = reader.Read(b)
 	if err != io.EOF {
 		t.Fatal("err != io.EOF")
 	}
 	ls.Write([]byte("dfdbbdbt\n"))
 	n, err = reader.ReloadAndRead(b)
-	if n != 9 {
-		t.Log("n:", n)
-		t.Log("err:", err)
-		t.Fatal("n != 9")
-	}
+	AssertIntEqual("current", n, 9, err)
+
 	ls.Close()
 	ls.Write([]byte("dfdbbdbt\n"))
 	n, err = reader.ReloadAndRead(b)
-	if n != 0 {
-		t.Log("n:", n)
-		t.Log("err:", err)
-		t.Fatal("n != 0")
-	}
+	AssertIntEqual("current", n, 0, err)
 }

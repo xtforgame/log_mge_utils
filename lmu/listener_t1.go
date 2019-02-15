@@ -6,9 +6,15 @@ import (
 // "path/filepath"
 )
 
+type ListenerOptionsT1 struct {
+	EventReceiverSize int
+	BufferSize        int
+}
+
 type ListenerT1 struct {
 	owner         *LoggerT1
 	mode          string
+	options       ListenerOptionsT1
 	isListening   bool
 	isRestoring   bool
 	receiveChan   chan *LoggerEvent
@@ -20,7 +26,7 @@ type ListenerT1 struct {
 	lastEOFPos      int64
 }
 
-func (listener *ListenerT1) GetOwner() Writer {
+func (listener *ListenerT1) GetOwner() Logger {
 	return listener.owner
 }
 
@@ -64,9 +70,8 @@ func (listener *ListenerT1) ReloadAndRead(p []byte) (int, error) {
 	return 0, nil
 }
 
-func (listener *ListenerT1) StartRestore() error {
+func (listener *ListenerT1) Restore() error {
 	readBuff := make([]byte, 200)
-	listener.isListening = true
 	listener.isRestoring = true
 	for true {
 		n, err := listener.logStorerReader.Read(readBuff)
@@ -86,6 +91,14 @@ func (listener *ListenerT1) StartRestore() error {
 		})
 	}
 	return nil
+}
+
+func (listener *ListenerT1) Listen() {
+	listener.isListening = true
+}
+
+func (listener *ListenerT1) Unlisten() {
+	listener.isListening = false
 }
 
 func (listener *ListenerT1) Dispatch(event *LoggerEvent) {
@@ -110,10 +123,11 @@ func (listener *ListenerT1) Receive(event *LoggerEvent) {
 	if listener.isRestoring {
 		return
 	}
-	// if listener.currentPos <=  {
-	// 	listener.StartRestore()
-	// 	return
-	// }
+	if listener.currentPos < event.Position {
+		listener.Restore()
+		return
+	}
+	listener.currentPos += event.Length
 	listener.Dispatch(event)
 }
 

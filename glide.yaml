@@ -1,0 +1,6 @@
+package: github.com/xtforgame/log_mge_utils
+import:
+- package: github.com/gorilla/websocket
+  version: ^1.2.0
+- package: github.com/go-chi/chi
+  version: ^3.3.2

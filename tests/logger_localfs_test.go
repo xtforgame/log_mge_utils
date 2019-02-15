@@ -34,55 +34,39 @@ var localLoggerFsTestFile = localLoggerFsTestFolder + "/x.x"
 func TestLoggerLocalFsWrite2(t *testing.T) {
 	os.RemoveAll(localLoggerFsTestFolder)
 	os.MkdirAll(localLoggerFsTestFolder, os.ModePerm)
-	// file, err := os.OpenFile(localFsTestFolder+"/ff.log", os.O_WRONLY|os.O_CREATE, os.ModePerm)
-	// if err != nil {
-	// 	t.Error("open file FAIL")
-	// }
-	// file.Close()
 
 	ls, _ := localfs.NewLocalFsStorer(localLoggerFsTestFolder)
 	lb, _ := logbuffers.NewSimpleBuffer()
 	logger, _ := lmu.NewLoggerT1(ls, lb)
 	defer logger.Close()
 
-	restoreCounter := 0
-	writeDataCounter := 0
+	listener1, _ := logger.CreateListener(nil)
+	lh1 := CreateListenerHelperT1(t, "listener 1", listener1)
 
-	AssertRestoreCounter := func(counter int) {
-		if restoreCounter != counter {
-			t.Fatal("expect restoreCounter: ", counter, ", actual:", writeDataCounter)
-		}
-	}
+	listener2, _ := logger.CreateListener(nil)
+	lh2 := CreateListenerHelperT1(t, "listener 2", listener2)
 
-	AssertWriteCounter := func(counter int) {
-		if writeDataCounter != counter {
-			t.Fatal("expect writeDataCounter: ", counter, ", actual:", writeDataCounter)
-		}
-	}
-
-	listener, _ := logger.CreateListener()
-	listener.OnEvent(func(event *lmu.LoggerEvent) {
-		data, ok := event.Data.(*lmu.DataEventPayload)
-		if ok {
-			if data.IsFromRestoring {
-				restoreCounter++
-			} else {
-				writeDataCounter++
-			}
-			t.Log("cc", event.Position)
-		}
-
-	})
 	logger.Write([]byte("dfdbbdbt\n"))
-	err := listener.StartRestore()
+	err := lh1.Listener.Restore()
 	if err != nil {
 		// t.Fatal(err)
 	}
 
-	AssertRestoreCounter(1)
+	lh1.Listener.Listen()
+
+	lh1.AssertRestoreEventCounter(1)
+
+	lh2.AssertRestoreEventCounter(0)
+	lh2.Listener.Restore()
 
 	logger.Write([]byte("dfdbbdbt\n"))
-	AssertWriteCounter(1)
+	lh1.AssertWriteEventCounter(1)
+	lh2.AssertWriteEventCounter(0)
+	lh2.Listener.Listen()
 	logger.Write([]byte("dfdbbdbt\n"))
-	AssertWriteCounter(2)
+	lh1.AssertWriteEventCounter(2)
+	lh2.AssertRestoreEventCounter(2)
+
+	logger.Write([]byte("dfdbbdbt\n"))
+	lh2.AssertWriteEventCounter(1)
 }

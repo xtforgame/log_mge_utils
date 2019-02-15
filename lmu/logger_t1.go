@@ -40,6 +40,10 @@ func (logger *LoggerT1) GetLogBuffer() LogBuffer {
 	return logger.logBuffer
 }
 
+func (logger *LoggerT1) GetStreamSize() int64 {
+	return logger.streamSize
+}
+
 func (logger *LoggerT1) Write(p []byte) (int, error) {
 	n, err := logger.logStorer.Write(p)
 	data := &DataEventPayload{
@@ -49,6 +53,7 @@ func (logger *LoggerT1) Write(p []byte) (int, error) {
 		listener.Receive(&LoggerEvent{
 			Name:     "data",
 			Position: logger.streamSize,
+			Length:   int64(n),
 			Data:     data,
 		})
 	}
@@ -56,18 +61,16 @@ func (logger *LoggerT1) Write(p []byte) (int, error) {
 	return n, err
 }
 
-func (logger *LoggerT1) CreateListener() (Listener, error) {
+func (logger *LoggerT1) CreateListener(options interface{}) (Listener, error) {
+	op, _ := options.(ListenerOptionsT1)
 	listener := &ListenerT1{
 		owner:       logger,
 		mode:        ListenerModeCallback,
 		receiveChan: make(chan *LoggerEvent, 100),
+		options:     op,
 	}
-	// err := listener.Reload()
-	// if err != nil {
-	// 	return nil, err
-	// }
-	logger.listeners = append(logger.listeners, listener)
 	listener.Reinit()
+	logger.listeners = append(logger.listeners, listener)
 	return listener, nil
 }
 
