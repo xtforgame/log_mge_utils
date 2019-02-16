@@ -7,6 +7,11 @@ import (
 
 func main() {
 	defer utils.FinalReport()
+	defer func() {
+		if logwatcher.LoggerHeplerInst != nil {
+			logwatcher.LoggerHeplerInst.Close()
+		}
+	}()
 	// os.Exit(0)
 
 	hs := logwatcher.NewHttpServer()

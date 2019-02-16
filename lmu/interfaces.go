@@ -20,6 +20,7 @@ type Readable interface {
 }
 
 type EventCallback func(event *LoggerEvent)
+type ListenerCreator func(logger Logger, options interface{}) (Listener, error)
 
 type SReader interface {
 	Readable
@@ -48,11 +49,15 @@ type LogBuffer interface {
 type Logger interface {
 	Writer
 	CreateListener(options interface{}) (Listener, error)
+	RemoveListener(listener Listener)
 	GetStreamSize() int64
+	GetLogStorer() LogStorer
+	GetLogBuffer() LogBuffer
 }
 
 type Listener interface {
 	Readable
+	GetRef() interface{}
 	GetOwner() Logger
 	Restore() error
 	Listen()

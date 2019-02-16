@@ -4,8 +4,10 @@ import (
 	"testing"
 	// "errors"
 	// "bufio"
-	"github.com/xtforgame/log_mge_utils/lmu"
+	// "github.com/xtforgame/log_mge_utils/lmu"
+	"github.com/xtforgame/log_mge_utils/listeners/listenert1"
 	"github.com/xtforgame/log_mge_utils/logbuffers"
+	"github.com/xtforgame/log_mge_utils/loggers/loggert1"
 	"github.com/xtforgame/log_mge_utils/logstorers/localfs"
 	"os"
 )
@@ -19,7 +21,7 @@ var localLoggerFsTestFile = localLoggerFsTestFolder + "/x.x"
 
 // 	ls, _ := localfs.NewLocalFsStorer(localLoggerFsTestFolder)
 // 	lb, _ := logbuffers.NewSimpleBuffer()
-// 	logger, _ := lmu.NewLoggerT1(ls, lb)
+// 	logger, _ := lmu.NewLoggerT1(ls, lb, lmu.CreateListenerT1)
 // 	defer logger.Close()
 
 // 	logger.Write([]byte("dfdbbdbt\n"))
@@ -37,7 +39,7 @@ func TestLoggerLocalFsWrite2(t *testing.T) {
 
 	ls, _ := localfs.NewLocalFsStorer(localLoggerFsTestFolder)
 	lb, _ := logbuffers.NewSimpleBuffer()
-	logger, _ := lmu.NewLoggerT1(ls, lb)
+	logger, _ := loggert1.NewLoggerT1(ls, lb, listenert1.CreateListenerT1)
 	defer logger.Close()
 
 	listener1, _ := logger.CreateListener(nil)

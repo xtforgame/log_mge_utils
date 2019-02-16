@@ -1,9 +1,10 @@
-package lmu
+package listenert1
 
 import (
-// "errors"
-// "io"
-// "path/filepath"
+	// "errors"
+	// "io"
+	// "path/filepath"
+	"github.com/xtforgame/log_mge_utils/lmu"
 )
 
 type ListenerOptionsT1 struct {
@@ -12,25 +13,41 @@ type ListenerOptionsT1 struct {
 }
 
 type ListenerT1 struct {
-	owner         *LoggerT1
+	owner         lmu.Logger
 	mode          string
 	options       ListenerOptionsT1
 	isListening   bool
 	isRestoring   bool
-	receiveChan   chan *LoggerEvent
-	eventCallback EventCallback
+	receiveChan   chan *lmu.LoggerEvent
+	eventCallback lmu.EventCallback
 
-	logStorerReader SReader
-	logBuffReader   SReader
+	logStorerReader lmu.SReader
+	logBuffReader   lmu.SReader
 	currentPos      int64
 	lastEOFPos      int64
 }
 
-func (listener *ListenerT1) GetOwner() Logger {
+func CreateListenerT1(logger lmu.Logger, options interface{}) (lmu.Listener, error) {
+	listener := &ListenerT1{owner: logger}
+	listener.Reinit(options)
+	return listener, nil
+}
+
+func (listener *ListenerT1) GetOwner() lmu.Logger {
 	return listener.owner
 }
 
-func (listener *ListenerT1) Reinit() error {
+func (listener *ListenerT1) GetRef() interface{} {
+	return listener
+}
+
+func (listener *ListenerT1) Reinit(options interface{}) error {
+	if options != nil {
+		// op, _ := options.(ListenerOptionsT1)
+		listener.mode = lmu.ListenerModeCallback
+		listener.receiveChan = make(chan *lmu.LoggerEvent, 100)
+	}
+	listener.closeReaders()
 	newStorerReader, err := listener.owner.GetLogStorer().CreateReader()
 	if err != nil {
 		return err
@@ -58,18 +75,6 @@ func (listener *ListenerT1) GetLastEOFPos() int64 {
 	return listener.lastEOFPos
 }
 
-func (listener *ListenerT1) Read(p []byte) (n int, err error) {
-	return 0, nil
-}
-
-func (listener *ListenerT1) Seek(off int64, whence int) (int64, error) {
-	return 0, nil
-}
-
-func (listener *ListenerT1) ReloadAndRead(p []byte) (int, error) {
-	return 0, nil
-}
-
 func (listener *ListenerT1) Restore() error {
 	readBuff := make([]byte, 200)
 	listener.isRestoring = true
@@ -80,12 +85,12 @@ func (listener *ListenerT1) Restore() error {
 			return err
 		}
 		listener.currentPos += int64(n)
-		data := &DataEventPayload{
+		data := &lmu.DataEventPayload{
 			IsFromRestoring: true,
 			Bytes:           readBuff[:n],
 		}
-		listener.Dispatch(&LoggerEvent{
-			Name:     "data",
+		listener.Dispatch(&lmu.LoggerEvent{
+			Name:     lmu.EventOnData,
 			Position: listener.currentPos,
 			Data:     data,
 		})
@@ -101,21 +106,20 @@ func (listener *ListenerT1) Unlisten() {
 	listener.isListening = false
 }
 
-func (listener *ListenerT1) Dispatch(event *LoggerEvent) {
-	if len(listener.receiveChan) == cap(listener.receiveChan) {
-
-	}
+func (listener *ListenerT1) Dispatch(event *lmu.LoggerEvent) {
+	// if len(listener.receiveChan) == cap(listener.receiveChan) {
+	// }
 	if listener.eventCallback != nil {
 		listener.eventCallback(event)
 	}
 }
 
-func (listener *ListenerT1) Receive(event *LoggerEvent) {
+func (listener *ListenerT1) Receive(event *lmu.LoggerEvent) {
 	if !listener.isListening {
 		return
 	}
-	if event.Name == EventNextIteration {
-		listener.Reinit()
+	if event.Name == lmu.EventNextIteration {
+		listener.Reinit(nil)
 		listener.Dispatch(event)
 		// listener.isRestoring = true
 		return
@@ -131,11 +135,11 @@ func (listener *ListenerT1) Receive(event *LoggerEvent) {
 	listener.Dispatch(event)
 }
 
-func (listener *ListenerT1) OnEvent(eventCallback EventCallback) {
+func (listener *ListenerT1) OnEvent(eventCallback lmu.EventCallback) {
 	listener.eventCallback = eventCallback
 }
 
-func (listener *ListenerT1) Close() {
+func (listener *ListenerT1) closeReaders() {
 	if listener.logStorerReader != nil {
 		listener.logStorerReader.Close()
 		listener.logStorerReader = nil
@@ -145,8 +149,14 @@ func (listener *ListenerT1) Close() {
 		listener.logBuffReader.Close()
 		listener.logBuffReader = nil
 	}
+}
+
+func (listener *ListenerT1) Close() {
+	listener.owner.RemoveListener(listener)
+
 	if listener.receiveChan != nil {
 		close(listener.receiveChan)
 		listener.receiveChan = nil
 	}
+	listener.closeReaders()
 }

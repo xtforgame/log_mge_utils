@@ -27,7 +27,7 @@ func CreateListenerHelperT1(t *testing.T, name string, listener lmu.Listener) *L
 	}
 	listener.OnEvent(func(event *lmu.LoggerEvent) {
 		data, ok := event.Data.(*lmu.DataEventPayload)
-		if ok {
+		if event.Name == lmu.EventOnData && ok {
 			if data.IsFromRestoring {
 				lh.RestoreEventCounter++
 			} else {
