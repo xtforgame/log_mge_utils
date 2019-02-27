@@ -8,12 +8,16 @@ go fmt ./...&&go test ./... -v -mod=vendor
 
 go fmt ./...&&go test ./tests/... -v -mod=vendor
 
+go clean -cache
+GOOS=js GOARCH=wasm go build -v -mod=vendor -o build/main.wasm main/wasm_01.go
 
-GOOS=js GOARCH=wasm go build -o build/main.wasm
+
+go fmt ./...&&go run -v -mod=vendor main/basicws_server.go
+go fmt ./...&&go run -v -mod=vendor main/basicws_client.go
+
+go fmt ./...&&go run -v -mod=vendor main/logwatcher_server.go
+go fmt ./...&&go run -v -mod=vendor main/logwatcher_client.go
 
 
-go fmt ./...&&go run main/basicws_server.go
-go fmt ./...&&go run main/basicws_client.go
-
-go fmt ./...&&go run main/logwatcher_server.go
-go fmt ./...&&go run main/logwatcher_client.go
+bash ./docker/bin/build_logwatcher_server.sh
+bash ./docker/alpine3.9/build_logwatcher_server.sh
