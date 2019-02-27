@@ -1,8 +1,0 @@
-hash: dd5b324c29ceae2fa636a5ac33c2f7bd3ff41392dc9cd7f28177d680c63fd645
-updated: 2019-02-15T15:46:23.698764+08:00
-imports:
-- name: github.com/go-chi/chi
-  version: 08d9051ef6546d57c5dca8eae13e6df362e2d568
-- name: github.com/gorilla/websocket
-  version: 66b9c49e59c6c48f0ffce28c2d8b8a5678502c6d
-testImports: []

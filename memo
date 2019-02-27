@@ -1,6 +1,12 @@
-go fmt ./...&&go test ./... -v
+go env | grep GOCACHE
 
-go fmt ./...&&go test ./tests/... -v
+export GO111MODULE=on
+
+go mod vendor
+
+go fmt ./...&&go test ./... -v -mod=vendor
+
+go fmt ./...&&go test ./tests/... -v -mod=vendor
 
 
 GOOS=js GOARCH=wasm go build -o build/main.wasm
