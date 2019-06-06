@@ -118,6 +118,10 @@ func (listener *ListenerT1) Receive(event *lmu.LoggerEvent) {
 	if !listener.isListening {
 		return
 	}
+	if event.Name == lmu.EventLogRemoved {
+		listener.Dispatch(event)
+		return
+	}
 	if event.Name == lmu.EventNextIteration {
 		listener.Reinit(nil)
 		listener.Dispatch(event)

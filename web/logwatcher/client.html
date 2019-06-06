@@ -4,10 +4,13 @@
 <head>
   <meta charset="utf-8">
   <script>
+    var EventNextIterationCode = String.fromCharCode({{.EventNextIterationCode}});
+    var EventOnDataCode = String.fromCharCode({{.EventOnDataCode}});
+    var EventLogRemovedCode = String.fromCharCode({{.EventLogRemovedCode}});
     window.addEventListener("load", function (evt) {
       var output = document.getElementById("output");
       var input = document.getElementById("input");
-      var ws;
+      var readerWs;
       var currentSendElem = null;
       var currentResponseElem = null;
       var print = function (message) {
@@ -32,37 +35,48 @@
         }
         currentResponseElem.innerHTML += message;
       };
-      var clearResponse = function (message) {
+      var clearResponse = function () {
         displaySend("")
         appendResponse("")
         currentResponseElem.innerHTML = "RESPONSE: ===new iteration===<br />";
       }
+      var logRemoved = function () {
+        if (!currentResponseElem) {
+          currentResponseElem = document.createElement("div");
+          currentResponseElem.innerHTML = "RESPONSE: ";
+          output.appendChild(currentResponseElem);
+        }
+        currentResponseElem.innerHTML += "<br />===log removed===<br />";
+      };
       document.getElementById("open").onclick = function (evt) {
-        if (ws) {
+        if (readerWs) {
           return false;
         }
-        ws = new WebSocket("{{.}}");
-        ws.binaryType = 'blob'
-        ws.onopen = function (evt) {
+        readerWs = new WebSocket("{{.WsBaseUrl}}");
+        readerWs.binaryType = 'blob'
+        readerWs.onopen = function (evt) {
           print("OPEN");
+          readerWs.send("password");
         }
-        ws.onclose = function (evt) {
+        readerWs.onclose = function (evt) {
           print("CLOSE");
-          ws = null;
+          readerWs = null;
         }
-        ws.onmessage = function (evt) {
+        readerWs.onmessage = function (evt) {
           if (evt.data instanceof Blob) {
             evt.reader = new FileReader();
             evt.reader.onload = function () {
-              console.log(evt.reader.result);
               if (evt.reader.result && evt.reader.result.length > 0) {
                 console.log(evt.reader.result);
                 switch (evt.reader.result[0]) {
-                  case '\1':
+                  case EventOnDataCode:
                     appendResponse(evt.reader.result.slice(2));
                     break;
-                  case '\2':
-                    clearResponse("");
+                  case EventNextIterationCode:
+                    clearResponse();
+                    break;
+                  case EventLogRemovedCode:
+                    logRemoved();
                     break;
                 }
               }
@@ -72,31 +86,38 @@
             print("RESPONSE: " + evt.data);
           }
         }
-        ws.onerror = function (evt) {
+        readerWs.onerror = function (evt) {
           print("ERROR: " + evt.data);
         }
         return false;
       };
       document.getElementById("send").onclick = function (evt) {
-        if (!ws) {
+        if (!readerWs) {
           return false;
         }
         displaySend("SEND: " + input.value);
-        ws.send(input.value);
+        readerWs.send("\1" + input.value);
         return false;
       };
       document.getElementById("clear").onclick = function (evt) {
-        if (!ws) {
+        if (!readerWs) {
           return false;
         }
-        ws.send("\2");
+        readerWs.send("\2");
+        return false;
+      };
+      document.getElementById("removelog").onclick = function (evt) {
+        if (!readerWs) {
+          return false;
+        }
+        readerWs.send("\3");
         return false;
       };
       document.getElementById("close").onclick = function (evt) {
-        if (!ws) {
+        if (!readerWs) {
           return false;
         }
-        ws.close();
+        readerWs.close();
         return false;
       };
     });
@@ -117,6 +138,7 @@
               <p><input id="input" type="text" value="Hello world!">
                 <button id="send">Send</button>
                 <button id="clear">Clear</button>
+                <button id="removelog">Remove Log</button>
             </form>
       </td>
       <td valign="top" width="50%">

@@ -46,6 +46,10 @@ func (lb *SimpleBuffer) Forget(offset int64) int64 {
 	return 0
 }
 
+func (lb *SimpleBuffer) RemoveBuffer() {
+
+}
+
 func (lb *SimpleBuffer) Close() {
 
 }

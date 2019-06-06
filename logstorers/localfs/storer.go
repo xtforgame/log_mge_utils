@@ -118,6 +118,14 @@ func (lfs *LocalFsStorer) Write(p []byte) (int, error) {
 	return n, err
 }
 
+func (lfs *LocalFsStorer) RemoveStore() {
+	lfs.Close()
+	path := lfs.GetPath()
+	if fshelper.DirectoryExists(path) {
+		os.RemoveAll(path)
+	}
+}
+
 func (lfs *LocalFsStorer) Close() {
 	if lfs.file != nil {
 		lfs.file.Sync()

@@ -56,8 +56,11 @@ func NewHttpServer() *HttpServer {
 }
 
 func (hs *HttpServer) Init() {
+	if LoggerHeplerInst == nil {
+		LoggerHeplerInst = CreateLoggerHepler()
+	}
 	hs.router.HandleFunc("/client", home)
-	hs.router.HandleFunc("/echo", TestHandleWebsocket)
+	hs.router.HandleFunc("/listener/{logID}", TestHandleWebsocket)
 	// hs.router.FileServer("/", http.Dir("web/"))
 	// FileServer(hs.router, "/assets", http.Dir("./assets"))
 	hs.router.Get("/", func(w http.ResponseWriter, r *http.Request) {
@@ -76,7 +79,20 @@ func (hs *HttpServer) Start() {
 }
 
 func home(w http.ResponseWriter, r *http.Request) {
-	homeTemplate.Execute(w, "ws://"+r.Host+"/echo")
+	homeTemplate.Execute(
+		w,
+		struct {
+			WsBaseUrl              string
+			EventNextIterationCode byte
+			EventOnDataCode        byte
+			EventLogRemovedCode    byte
+		}{
+			"ws://" + r.Host + "/listener/20022",
+			EventNextIterationCode,
+			EventOnDataCode,
+			EventLogRemovedCode,
+		},
+	)
 }
 
 var homeTemplate *template.Template

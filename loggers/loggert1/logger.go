@@ -102,6 +102,19 @@ func (logger *LoggerT1) SwitchToNextIteration(iteration string) error {
 	return err
 }
 
+func (logger *LoggerT1) RemoveAndCloseLogger() {
+	logger.dispatch(&lmu.LoggerEvent{
+		Name:     lmu.EventLogRemoved,
+		Position: 0,
+		Length:   0,
+		Data:     nil,
+	})
+	if logger.logStorer != nil {
+		logger.logStorer.RemoveStore()
+	}
+	logger.Close()
+}
+
 func (logger *LoggerT1) Close() {
 	if logger.logStorer != nil {
 		logger.logStorer.Close()

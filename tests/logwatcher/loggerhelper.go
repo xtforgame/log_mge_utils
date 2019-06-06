@@ -7,35 +7,71 @@ import (
 	"github.com/xtforgame/log_mge_utils/logbuffers"
 	"github.com/xtforgame/log_mge_utils/loggers/loggert1"
 	"github.com/xtforgame/log_mge_utils/logstorers/localfs"
-	"os"
+	// "os"
+	"path"
+	"regexp"
+	"sync"
 )
 
-var localLoggWatcherFolder = "./tmp/test/log-watcher"
+var localLogWatcherBase = "./tmp/test/log-watcher"
+var logNameValidator = regexp.MustCompile(`^[0-9a-zA-Z_-]+$`)
 
 type LoggerHepler struct {
-	Logger lmu.Logger
+	loggers   map[string]lmu.Logger
+	loggersMu sync.Mutex
 }
 
 func CreateLoggerHepler() *LoggerHepler {
-	os.RemoveAll(localLoggWatcherFolder)
-	os.MkdirAll(localLoggWatcherFolder, os.ModePerm)
+	// os.RemoveAll(localLogWatcherBase)
+	// os.MkdirAll(localLogWatcherBase, os.ModePerm)
 
-	ls, _ := localfs.NewLocalFsStorer(localLoggWatcherFolder)
-	lb, _ := logbuffers.NewSimpleBuffer()
-	logger, _ := loggert1.NewLoggerT1(ls, lb, listenert1.CreateListenerT1)
-
-	lh := &LoggerHepler{
-		Logger: logger,
-	}
+	lh := &LoggerHepler{}
+	lh.loggers = make(map[string]lmu.Logger)
 	return lh
 }
 
-func (lh *LoggerHepler) Close() {
-	if lh.Logger != nil {
-		lh.Logger.Close()
-		lh.Logger = nil
+func (lh *LoggerHepler) GetLogger(logName string) lmu.Logger {
+	validLogName := logNameValidator.FindString(logName)
+	if validLogName == "" {
+		return nil
 	}
+	lh.loggersMu.Lock()
+	logger, ok := lh.loggers[logName]
+	if !ok {
+		// os.RemoveAll(localLogWatcherBase)
+		logWatcherWorkDir := path.Join(localLogWatcherBase, logName)
+		// os.MkdirAll(logWatcherWorkDir, os.ModePerm)
+
+		ls, _ := localfs.NewLocalFsStorer(logWatcherWorkDir)
+		lb, _ := logbuffers.NewSimpleBuffer()
+		logger, _ = loggert1.NewLoggerT1(ls, lb, listenert1.CreateListenerT1)
+		lh.loggers[logName] = logger
+	}
+	lh.loggersMu.Unlock()
+	return logger
+}
+
+func (lh *LoggerHepler) RemoveAndCloseLogger(logName string) {
+	lh.loggersMu.Lock()
+	logger, ok := lh.loggers[logName]
+	if ok {
+		logger.RemoveAndCloseLogger()
+		delete(lh.loggers, logName)
+	}
+	lh.loggersMu.Unlock()
+}
+
+func (lh *LoggerHepler) Close() {
+	lh.loggersMu.Lock()
+	for k, v := range lh.loggers {
+		if v != nil {
+			v.Close()
+			lh.loggers[k] = nil
+		}
+	}
+	lh.loggers = make(map[string]lmu.Logger)
 	fmt.Println("(lh *LoggerHepler) Close()")
+	lh.loggersMu.Unlock()
 }
 
 var LoggerHeplerInst *LoggerHepler

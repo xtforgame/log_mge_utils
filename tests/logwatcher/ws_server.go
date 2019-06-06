@@ -1,10 +1,11 @@
 package logwatcher
 
 import (
-	"fmt"
+	// "fmt"
 	// "flag"
 	"net/http"
 	// "strings"
+	"github.com/go-chi/chi"
 	// "github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
 	"github.com/xtforgame/log_mge_utils/lmu"
@@ -15,8 +16,15 @@ var upgrader = websocket.Upgrader{
 	WriteBufferSize: 1024,
 }
 
+type WsReaderEvent struct {
+	Bytes    []byte
+	Error    error
+	Finished bool
+}
+
 func TestHandleWebsocket(w http.ResponseWriter, r *http.Request) {
 	// l := log.WithField("remoteaddr", r.RemoteAddr)
+	logID := chi.URLParam(r, "logID")
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		// l.WithError(err).Error("Unable to upgrade connection")
@@ -27,52 +35,91 @@ func TestHandleWebsocket(w http.ResponseWriter, r *http.Request) {
 		conn.Close()
 	}()
 
-	if LoggerHeplerInst == nil {
-		LoggerHeplerInst = CreateLoggerHepler()
-	}
-
 	var listener lmu.Listener
-	l, _ := LoggerHeplerInst.Logger.CreateListener(nil)
-	listener = l
-	l.OnEvent(func(event *lmu.LoggerEvent) {
-		if event.Name == lmu.EventOnData {
-			data, ok := event.Data.(*lmu.DataEventPayload)
-			if ok {
-				bytes := append([]byte{1, 0}, data.Bytes...)
-				// fmt.Println("data :", data)
-				// if err := conn.WriteMessage(websocket.TextMessage, bytes); err != nil {
-				if err := conn.WriteMessage(websocket.BinaryMessage, bytes); err != nil {
-					// log.Println(err)
-					return
-				}
+	defer func() {
+		if listener != nil {
+			listener.Close()
+		}
+	}()
+
+	logger := LoggerHeplerInst.GetLogger(logID)
+	if logger == nil {
+		bytes := append([]byte{0, 0}, []byte("Wrong path name: "+logID)...)
+		conn.WriteMessage(websocket.BinaryMessage, bytes)
+		return
+	}
+	readChan := make(chan WsReaderEvent)
+
+	go func() {
+		for {
+			_, p, err := conn.ReadMessage()
+			readChan <- WsReaderEvent{
+				Bytes: p,
+				Error: err,
 			}
-		} else if event.Name == lmu.EventNextIteration {
-			bytes := []byte{2, 0}
-			if err := conn.WriteMessage(websocket.BinaryMessage, bytes); err != nil {
-				// log.Println(err)
+			if err != nil {
+				// fmt.Println("ws:", err)
 				return
 			}
 		}
-	})
-	l.Restore()
-	l.Listen()
-	defer func() {
-		listener.Close()
 	}()
 
 	for {
 		// messageType, p, err := conn.ReadMessage()
-		_, p, err := conn.ReadMessage()
-		if err != nil {
-			fmt.Println("ws:", err)
+		readEvent := <-readChan
+		if readEvent.Error != nil || readEvent.Finished {
+			// fmt.Println("ws:", err)
+			// fmt.Println("readEvent.Finished", readEvent.Finished)
 			return
 		}
-		if len(p) > 0 && p[0] == 2 {
-			LoggerHeplerInst.Logger.SwitchToNextIteration("")
-		} else {
-			LoggerHeplerInst.Logger.Write(p)
+		p := readEvent.Bytes
+
+		if len(p) > 0 {
+			if listener == nil {
+				l, _ := logger.CreateListener(nil)
+				listener = l
+				l.OnEvent(func(event *lmu.LoggerEvent) {
+					if event.Name == lmu.EventOnData {
+						data, ok := event.Data.(*lmu.DataEventPayload)
+						if ok {
+							bytes := append([]byte{EventOnDataCode, 0}, data.Bytes...)
+							// fmt.Println("data :", data)
+							// if err := conn.WriteMessage(websocket.TextMessage, bytes); err != nil {
+							if err := conn.WriteMessage(websocket.BinaryMessage, bytes); err != nil {
+								// log.Println(err)
+								return
+							}
+						}
+					} else if event.Name == lmu.EventNextIteration {
+						bytes := []byte{EventNextIterationCode}
+						if err := conn.WriteMessage(websocket.BinaryMessage, bytes); err != nil {
+							// log.Println(err)
+							return
+						}
+					} else if event.Name == lmu.EventLogRemoved {
+						bytes := []byte{EventLogRemovedCode}
+						if err := conn.WriteMessage(websocket.BinaryMessage, bytes); err != nil {
+							// log.Println(err)
+						}
+						// fmt.Println("lmu.EventLogRemoved")
+						go func() {
+							readChan <- WsReaderEvent{
+								Finished: true,
+							}
+						}()
+					}
+				})
+				l.Restore()
+				l.Listen()
+			} else if p[0] == 1 {
+				logger.Write(p[1:])
+			} else if p[0] == 2 {
+				logger.SwitchToNextIteration("")
+			} else if p[0] == 3 {
+				LoggerHeplerInst.RemoveAndCloseLogger(logID)
+			}
 		}
-		fmt.Println("p :", p)
+		// fmt.Println("p :", p)
 		// conn.WriteMessage(websocket.TextMessage, []byte(""))
 		// conn.WriteMessage(websocket.BinaryMessage, []byte(""))
 		// if err := conn.WriteMessage(messageType, p); err != nil {

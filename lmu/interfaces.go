@@ -38,12 +38,14 @@ type ReadableWriter interface {
 type LogStorer interface {
 	ReadableWriter
 	GetStoreType() (_type string)
+	RemoveStore()
 }
 
 type LogBuffer interface {
 	ReadableWriter
 	GetOffset() (offset int64)
 	Forget(offset int64) (newOffset int64)
+	RemoveBuffer()
 }
 
 type Logger interface {
@@ -53,6 +55,7 @@ type Logger interface {
 	GetStreamSize() int64
 	GetLogStorer() LogStorer
 	GetLogBuffer() LogBuffer
+	RemoveAndCloseLogger()
 }
 
 type Listener interface {
