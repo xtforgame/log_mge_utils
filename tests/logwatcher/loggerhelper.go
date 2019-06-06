@@ -30,7 +30,18 @@ func CreateLoggerHepler() *LoggerHepler {
 	return lh
 }
 
-func (lh *LoggerHepler) GetLogger(logName string) lmu.Logger {
+func (lh *LoggerHepler) FindLogger(logName string) lmu.Logger {
+	validLogName := logNameValidator.FindString(logName)
+	if validLogName == "" {
+		return nil
+	}
+	lh.loggersMu.Lock()
+	logger, _ := lh.loggers[logName]
+	lh.loggersMu.Unlock()
+	return logger
+}
+
+func (lh *LoggerHepler) CreateOrGetLogger(logName string) lmu.Logger {
 	validLogName := logNameValidator.FindString(logName)
 	if validLogName == "" {
 		return nil

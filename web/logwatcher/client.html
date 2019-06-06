@@ -9,7 +9,7 @@
     var EventLogRemovedCode = String.fromCharCode({{.EventLogRemovedCode}});
     window.addEventListener("load", function (evt) {
       var output = document.getElementById("output");
-      var input = document.getElementById("input");
+      var input = document.getElementById("logger-input");
       var readerWs;
       var currentSendElem = null;
       var currentResponseElem = null;
@@ -48,11 +48,11 @@
         }
         currentResponseElem.innerHTML += "<br />===log removed===<br />";
       };
-      document.getElementById("open").onclick = function (evt) {
+      document.getElementById("logger-open").onclick = function (evt) {
         if (readerWs) {
           return false;
         }
-        readerWs = new WebSocket("{{.WsBaseUrl}}");
+        readerWs = new WebSocket("{{.WsBaseUrl}}/listener/20022");
         readerWs.binaryType = 'blob'
         readerWs.onopen = function (evt) {
           print("OPEN");
@@ -91,7 +91,7 @@
         }
         return false;
       };
-      document.getElementById("send").onclick = function (evt) {
+      document.getElementById("logger-send").onclick = function (evt) {
         if (!readerWs) {
           return false;
         }
@@ -99,21 +99,21 @@
         readerWs.send("\1" + input.value);
         return false;
       };
-      document.getElementById("clear").onclick = function (evt) {
+      document.getElementById("logger-clear").onclick = function (evt) {
         if (!readerWs) {
           return false;
         }
         readerWs.send("\2");
         return false;
       };
-      document.getElementById("removelog").onclick = function (evt) {
+      document.getElementById("logger-removelog").onclick = function (evt) {
         if (!readerWs) {
           return false;
         }
         readerWs.send("\3");
         return false;
       };
-      document.getElementById("close").onclick = function (evt) {
+      document.getElementById("logger-close").onclick = function (evt) {
         if (!readerWs) {
           return false;
         }
@@ -128,18 +128,22 @@
   <table>
     <tr>
       <td valign="top" width="50%">
-        <p>Click "Open" to create a connection to the server,
-          "Send" to send a message to the server and "Close" to close the connection.
-          You can change the message and send multiple times.
-          <p>
-            <form>
-              <button id="open">Open</button>
-              <button id="close">Close</button>
-              <p><input id="input" type="text" value="Hello world!">
-                <button id="send">Send</button>
-                <button id="clear">Clear</button>
-                <button id="removelog">Remove Log</button>
-            </form>
+        Click "Open" to create a connection to the server,
+        "Send" to send a message to the server and "Close" to close the connection.
+        You can change the message and send multiple times.
+        <br />
+        <form>
+          <fieldset id="logger-field">
+            <legend>Logger</legend>
+            <button id="logger-open">Open</button>
+            <button id="logger-close">Close</button>
+            <br />
+            <input id="logger-input" type="text" value="Hello world!" />
+            <button id="logger-send">Send</button>
+            <button id="logger-clear">Clear</button>
+            <button id="logger-removelog">Remove Log</button>
+          </fieldset>
+        </form>
       </td>
       <td valign="top" width="50%">
         <div id="output"></div>

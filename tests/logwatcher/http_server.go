@@ -60,7 +60,8 @@ func (hs *HttpServer) Init() {
 		LoggerHeplerInst = CreateLoggerHepler()
 	}
 	hs.router.HandleFunc("/client", home)
-	hs.router.HandleFunc("/listener/{logID}", TestHandleWebsocket)
+	hs.router.HandleFunc("/logger/{logID}", LoggerWebsocket)
+	hs.router.HandleFunc("/listener/{logID}", ListenerWebsocket)
 	// hs.router.FileServer("/", http.Dir("web/"))
 	// FileServer(hs.router, "/assets", http.Dir("./assets"))
 	hs.router.Get("/", func(w http.ResponseWriter, r *http.Request) {
@@ -79,6 +80,10 @@ func (hs *HttpServer) Start() {
 }
 
 func home(w http.ResponseWriter, r *http.Request) {
+	/* ======================= for test start ======================= */
+	dat, _ := ioutil.ReadFile("./web/logwatcher/client.html")
+	homeTemplate = template.Must(template.New("").Parse(string(dat)))
+	/* =======================  for test end  ======================= */
 	homeTemplate.Execute(
 		w,
 		struct {
@@ -87,7 +92,7 @@ func home(w http.ResponseWriter, r *http.Request) {
 			EventOnDataCode        byte
 			EventLogRemovedCode    byte
 		}{
-			"ws://" + r.Host + "/listener/20022",
+			"ws://" + r.Host,
 			EventNextIterationCode,
 			EventOnDataCode,
 			EventLogRemovedCode,

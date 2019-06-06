@@ -22,19 +22,7 @@ type WsReaderEvent struct {
 	Finished bool
 }
 
-func TestHandleWebsocket(w http.ResponseWriter, r *http.Request) {
-	// l := log.WithField("remoteaddr", r.RemoteAddr)
-	logID := chi.URLParam(r, "logID")
-	conn, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		// l.WithError(err).Error("Unable to upgrade connection")
-		return
-	}
-
-	defer func() {
-		conn.Close()
-	}()
-
+func basicHandler(logID string, conn *websocket.Conn, logger lmu.Logger) {
 	var listener lmu.Listener
 	defer func() {
 		if listener != nil {
@@ -42,12 +30,6 @@ func TestHandleWebsocket(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
-	logger := LoggerHeplerInst.GetLogger(logID)
-	if logger == nil {
-		bytes := append([]byte{0, 0}, []byte("Wrong path name: "+logID)...)
-		conn.WriteMessage(websocket.BinaryMessage, bytes)
-		return
-	}
 	readChan := make(chan WsReaderEvent)
 
 	go func() {
@@ -127,4 +109,48 @@ func TestHandleWebsocket(w http.ResponseWriter, r *http.Request) {
 		// 	return
 		// }
 	}
+}
+
+func LoggerWebsocket(w http.ResponseWriter, r *http.Request) {
+	// l := log.WithField("remoteaddr", r.RemoteAddr)
+	logID := chi.URLParam(r, "logID")
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		// l.WithError(err).Error("Unable to upgrade connection")
+		return
+	}
+
+	defer func() {
+		conn.Close()
+	}()
+
+	logger := LoggerHeplerInst.CreateOrGetLogger(logID)
+	if logger == nil {
+		bytes := append([]byte{WrongPathCode}, []byte("Wrong path name: "+logID)...)
+		conn.WriteMessage(websocket.BinaryMessage, bytes)
+		return
+	}
+	basicHandler(logID, conn, logger)
+}
+
+func ListenerWebsocket(w http.ResponseWriter, r *http.Request) {
+	// l := log.WithField("remoteaddr", r.RemoteAddr)
+	logID := chi.URLParam(r, "logID")
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		// l.WithError(err).Error("Unable to upgrade connection")
+		return
+	}
+
+	defer func() {
+		conn.Close()
+	}()
+
+	logger := LoggerHeplerInst.CreateOrGetLogger(logID)
+	if logger == nil {
+		bytes := append([]byte{WrongPathCode}, []byte("Wrong path name: "+logID)...)
+		conn.WriteMessage(websocket.BinaryMessage, bytes)
+		return
+	}
+	basicHandler(logID, conn, logger)
 }
