@@ -59,9 +59,11 @@ func (hs *HttpServer) Init() {
 	if LoggerHeplerInst == nil {
 		LoggerHeplerInst = CreateLoggerHepler()
 	}
-	hs.router.HandleFunc("/client", home)
-	hs.router.HandleFunc("/logger/{logID}", LoggerWebsocket)
-	hs.router.HandleFunc("/listener/{logID}", ListenerWebsocket)
+	hs.router.HandleFunc("/logger", loggerHome)
+	hs.router.HandleFunc("/listener", listenerHome)
+	hs.router.HandleFunc("/app.js", jsScript)
+	hs.router.HandleFunc("/loggers/{logID}", LoggerWebsocket)
+	hs.router.HandleFunc("/listeners/{logID}", ListenerWebsocket)
 	// hs.router.FileServer("/", http.Dir("web/"))
 	// FileServer(hs.router, "/assets", http.Dir("./assets"))
 	hs.router.Get("/", func(w http.ResponseWriter, r *http.Request) {
@@ -74,17 +76,23 @@ func (hs *HttpServer) Init() {
 }
 
 func (hs *HttpServer) Start() {
-	dat, _ := ioutil.ReadFile("./web/logwatcher/client.html")
-	homeTemplate = template.Must(template.New("").Parse(string(dat)))
+	loggerHomeHtmlTmp, _ := ioutil.ReadFile("./web/logwatcher/logger.html")
+	loggerHomeTemplate = template.Must(template.New("").Parse(string(loggerHomeHtmlTmp)))
+
+	listenerHomeHtmlTmp, _ := ioutil.ReadFile("./web/logwatcher/listener.html")
+	listenerHomeTemplate = template.Must(template.New("").Parse(string(listenerHomeHtmlTmp)))
+
+	jsTmp, _ := ioutil.ReadFile("./web/logwatcher/app.js")
+	jsTemplate = template.Must(template.New("").Parse(string(jsTmp)))
 	httpserver.RunAndWaitGracefulShutdown(hs.server)
 }
 
-func home(w http.ResponseWriter, r *http.Request) {
+func loggerHome(w http.ResponseWriter, r *http.Request) {
 	/* ======================= for test start ======================= */
-	dat, _ := ioutil.ReadFile("./web/logwatcher/client.html")
-	homeTemplate = template.Must(template.New("").Parse(string(dat)))
+	loggerHomeHtmlTmp, _ := ioutil.ReadFile("./web/logwatcher/logger.html")
+	loggerHomeTemplate = template.Must(template.New("").Parse(string(loggerHomeHtmlTmp)))
 	/* =======================  for test end  ======================= */
-	homeTemplate.Execute(
+	loggerHomeTemplate.Execute(
 		w,
 		struct {
 			WsBaseUrl              string
@@ -100,4 +108,48 @@ func home(w http.ResponseWriter, r *http.Request) {
 	)
 }
 
-var homeTemplate *template.Template
+func listenerHome(w http.ResponseWriter, r *http.Request) {
+	/* ======================= for test start ======================= */
+	listenerHomeHtmlTmp, _ := ioutil.ReadFile("./web/logwatcher/listener.html")
+	listenerHomeTemplate = template.Must(template.New("").Parse(string(listenerHomeHtmlTmp)))
+	/* =======================  for test end  ======================= */
+	listenerHomeTemplate.Execute(
+		w,
+		struct {
+			WsBaseUrl              string
+			EventNextIterationCode byte
+			EventOnDataCode        byte
+			EventLogRemovedCode    byte
+		}{
+			"ws://" + r.Host,
+			EventNextIterationCode,
+			EventOnDataCode,
+			EventLogRemovedCode,
+		},
+	)
+}
+
+func jsScript(w http.ResponseWriter, r *http.Request) {
+	/* ======================= for test start ======================= */
+	jsTmp, _ := ioutil.ReadFile("./web/logwatcher/app.js")
+	jsTemplate = template.Must(template.New("").Parse(string(jsTmp)))
+	/* =======================  for test end  ======================= */
+	jsTemplate.Execute(
+		w,
+		struct {
+			WsBaseUrl              string
+			EventNextIterationCode byte
+			EventOnDataCode        byte
+			EventLogRemovedCode    byte
+		}{
+			"ws://" + r.Host,
+			EventNextIterationCode,
+			EventOnDataCode,
+			EventLogRemovedCode,
+		},
+	)
+}
+
+var loggerHomeTemplate *template.Template
+var listenerHomeTemplate *template.Template
+var jsTemplate *template.Template

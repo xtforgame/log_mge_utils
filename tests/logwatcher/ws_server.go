@@ -2,6 +2,7 @@ package logwatcher
 
 import (
 	// "fmt"
+	"unsafe"
 	// "flag"
 	"net/http"
 	// "strings"
@@ -22,7 +23,11 @@ type WsReaderEvent struct {
 	Finished bool
 }
 
-func basicHandler(logID string, conn *websocket.Conn, logger lmu.Logger) {
+func ToString(b []byte) string {
+	return *(*string)(unsafe.Pointer(&b))
+}
+
+func basicHandler(logID string, conn *websocket.Conn, logger lmu.Logger, connType string) {
 	var listener lmu.Listener
 	defer func() {
 		if listener != nil {
@@ -58,6 +63,9 @@ func basicHandler(logID string, conn *websocket.Conn, logger lmu.Logger) {
 
 		if len(p) > 0 {
 			if listener == nil {
+				if ToString(p) != "password" {
+					return
+				}
 				l, _ := logger.CreateListener(nil)
 				listener = l
 				l.OnEvent(func(event *lmu.LoggerEvent) {
@@ -93,12 +101,14 @@ func basicHandler(logID string, conn *websocket.Conn, logger lmu.Logger) {
 				})
 				l.Restore()
 				l.Listen()
-			} else if p[0] == 1 {
-				logger.Write(p[1:])
-			} else if p[0] == 2 {
-				logger.SwitchToNextIteration("")
-			} else if p[0] == 3 {
-				LoggerHeplerInst.RemoveAndCloseLogger(logID)
+			} else if connType == "logger" {
+				if p[0] == 1 {
+					logger.Write(p[1:])
+				} else if p[0] == 2 {
+					logger.SwitchToNextIteration("")
+				} else if p[0] == 3 {
+					LoggerHeplerInst.RemoveAndCloseLogger(logID)
+				}
 			}
 		}
 		// fmt.Println("p :", p)
@@ -130,7 +140,7 @@ func LoggerWebsocket(w http.ResponseWriter, r *http.Request) {
 		conn.WriteMessage(websocket.BinaryMessage, bytes)
 		return
 	}
-	basicHandler(logID, conn, logger)
+	basicHandler(logID, conn, logger, "logger")
 }
 
 func ListenerWebsocket(w http.ResponseWriter, r *http.Request) {
@@ -152,5 +162,5 @@ func ListenerWebsocket(w http.ResponseWriter, r *http.Request) {
 		conn.WriteMessage(websocket.BinaryMessage, bytes)
 		return
 	}
-	basicHandler(logID, conn, logger)
+	basicHandler(logID, conn, logger, "listener")
 }
