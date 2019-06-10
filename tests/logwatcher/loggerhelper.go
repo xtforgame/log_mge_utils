@@ -7,25 +7,30 @@ import (
 	"github.com/xtforgame/log_mge_utils/logbuffers"
 	"github.com/xtforgame/log_mge_utils/loggers/loggert1"
 	"github.com/xtforgame/log_mge_utils/logstorers/localfs"
+	"path/filepath"
 	// "os"
 	"path"
 	"regexp"
 	"sync"
 )
 
-var localLogWatcherBase = "./tmp/test/log-watcher"
 var logNameValidator = regexp.MustCompile(`^[0-9a-zA-Z_-]+$`)
 
 type LoggerHepler struct {
-	loggers   map[string]lmu.Logger
-	loggersMu sync.Mutex
+	logPath             string
+	localLogWatcherBase string
+	loggers             map[string]lmu.Logger
+	loggersMu           sync.Mutex
 }
 
-func CreateLoggerHepler() *LoggerHepler {
-	// os.RemoveAll(localLogWatcherBase)
-	// os.MkdirAll(localLogWatcherBase, os.ModePerm)
+func CreateLoggerHepler(logPath string) *LoggerHepler {
+	lh := &LoggerHepler{
+		logPath:             logPath,
+		localLogWatcherBase: filepath.Join(logPath, "log-watcher"),
+	}
+	// os.RemoveAll(lh.localLogWatcherBase)
+	// os.MkdirAll(lh.localLogWatcherBase, os.ModePerm)
 
-	lh := &LoggerHepler{}
 	lh.loggers = make(map[string]lmu.Logger)
 	return lh
 }
@@ -49,8 +54,8 @@ func (lh *LoggerHepler) CreateOrGetLogger(logName string) lmu.Logger {
 	lh.loggersMu.Lock()
 	logger, ok := lh.loggers[logName]
 	if !ok {
-		// os.RemoveAll(localLogWatcherBase)
-		logWatcherWorkDir := path.Join(localLogWatcherBase, logName)
+		// os.RemoveAll(lh.localLogWatcherBase)
+		logWatcherWorkDir := path.Join(lh.localLogWatcherBase, logName)
 		// os.MkdirAll(logWatcherWorkDir, os.ModePerm)
 
 		ls, _ := localfs.NewLocalFsStorer(logWatcherWorkDir)

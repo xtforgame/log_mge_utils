@@ -16,6 +16,7 @@ import (
 	"net/http"
 	// "sort"
 	"io/ioutil"
+	"path/filepath"
 	"strings"
 )
 
@@ -40,13 +41,17 @@ func FileServer(r chi.Router, path string, root http.FileSystem) {
 }
 
 type HttpServer struct {
-	server *http.Server
-	router *chi.Mux
+	logPath string
+	webPath string
+	server  *http.Server
+	router  *chi.Mux
 }
 
-func NewHttpServer() *HttpServer {
+func NewHttpServer(logPath string, webPath string) *HttpServer {
 	r := chi.NewRouter()
 	return &HttpServer{
+		logPath: logPath,
+		webPath: webPath,
 		server: &http.Server{
 			Addr:    ":8080",
 			Handler: r,
@@ -57,11 +62,11 @@ func NewHttpServer() *HttpServer {
 
 func (hs *HttpServer) Init() {
 	if LoggerHeplerInst == nil {
-		LoggerHeplerInst = CreateLoggerHepler()
+		LoggerHeplerInst = CreateLoggerHepler(hs.logPath)
 	}
-	hs.router.HandleFunc("/logger", loggerHome)
-	hs.router.HandleFunc("/listener", listenerHome)
-	hs.router.HandleFunc("/app.js", jsScript)
+	hs.router.HandleFunc("/logger", hs.loggerHome)
+	hs.router.HandleFunc("/listener", hs.listenerHome)
+	hs.router.HandleFunc("/app.js", hs.jsScript)
 	hs.router.HandleFunc("/loggers/{logID}", LoggerWebsocket)
 	hs.router.HandleFunc("/listeners/{logID}", ListenerWebsocket)
 	// hs.router.FileServer("/", http.Dir("web/"))
@@ -76,20 +81,20 @@ func (hs *HttpServer) Init() {
 }
 
 func (hs *HttpServer) Start() {
-	loggerHomeHtmlTmp, _ := ioutil.ReadFile("./web/logwatcher/logger.html")
+	loggerHomeHtmlTmp, _ := ioutil.ReadFile(filepath.Join(hs.webPath, "logwatcher/logger.html"))
 	loggerHomeTemplate = template.Must(template.New("").Parse(string(loggerHomeHtmlTmp)))
 
-	listenerHomeHtmlTmp, _ := ioutil.ReadFile("./web/logwatcher/listener.html")
+	listenerHomeHtmlTmp, _ := ioutil.ReadFile(filepath.Join(hs.webPath, "logwatcher/listener.html"))
 	listenerHomeTemplate = template.Must(template.New("").Parse(string(listenerHomeHtmlTmp)))
 
-	jsTmp, _ := ioutil.ReadFile("./web/logwatcher/app.js")
+	jsTmp, _ := ioutil.ReadFile(filepath.Join(hs.webPath, "logwatcher/app.js"))
 	jsTemplate = template.Must(template.New("").Parse(string(jsTmp)))
 	httpserver.RunAndWaitGracefulShutdown(hs.server)
 }
 
-func loggerHome(w http.ResponseWriter, r *http.Request) {
+func (hs *HttpServer) loggerHome(w http.ResponseWriter, r *http.Request) {
 	/* ======================= for test start ======================= */
-	loggerHomeHtmlTmp, _ := ioutil.ReadFile("./web/logwatcher/logger.html")
+	loggerHomeHtmlTmp, _ := ioutil.ReadFile(filepath.Join(hs.webPath, "logwatcher/logger.html"))
 	loggerHomeTemplate = template.Must(template.New("").Parse(string(loggerHomeHtmlTmp)))
 	/* =======================  for test end  ======================= */
 	loggerHomeTemplate.Execute(
@@ -108,9 +113,9 @@ func loggerHome(w http.ResponseWriter, r *http.Request) {
 	)
 }
 
-func listenerHome(w http.ResponseWriter, r *http.Request) {
+func (hs *HttpServer) listenerHome(w http.ResponseWriter, r *http.Request) {
 	/* ======================= for test start ======================= */
-	listenerHomeHtmlTmp, _ := ioutil.ReadFile("./web/logwatcher/listener.html")
+	listenerHomeHtmlTmp, _ := ioutil.ReadFile(filepath.Join(hs.webPath, "logwatcher/listener.html"))
 	listenerHomeTemplate = template.Must(template.New("").Parse(string(listenerHomeHtmlTmp)))
 	/* =======================  for test end  ======================= */
 	listenerHomeTemplate.Execute(
@@ -129,9 +134,9 @@ func listenerHome(w http.ResponseWriter, r *http.Request) {
 	)
 }
 
-func jsScript(w http.ResponseWriter, r *http.Request) {
+func (hs *HttpServer) jsScript(w http.ResponseWriter, r *http.Request) {
 	/* ======================= for test start ======================= */
-	jsTmp, _ := ioutil.ReadFile("./web/logwatcher/app.js")
+	jsTmp, _ := ioutil.ReadFile(filepath.Join(hs.webPath, "logwatcher/app.js"))
 	jsTemplate = template.Must(template.New("").Parse(string(jsTmp)))
 	/* =======================  for test end  ======================= */
 	jsTemplate.Execute(

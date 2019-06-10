@@ -15,9 +15,19 @@ GOOS=js GOARCH=wasm go build -v -mod=vendor -o build/main.wasm main/wasm_01.go
 go fmt ./...&&go run -v -mod=vendor main/basicws_server.go
 go fmt ./...&&go run -v -mod=vendor main/basicws_client.go
 
-go fmt ./...&&go run -v -mod=vendor main/logwatcher_server.go
+go fmt ./...&&go run -v -mod=vendor main/logwatcher_server.go ./tmp dist/alpine3.9/logwatcher/web
 go fmt ./...&&go run -v -mod=vendor main/logwatcher_client.go
 
 
-bash ./docker/bin/build_logwatcher_server.sh
-bash ./docker/alpine3.9/build_logwatcher_server.sh
+bash ./docker/bin/build_logwatcher.sh
+bash ./docker/alpine3.9/build_logwatcher.sh
+
+
+docker-compose down
+docker-compose build --no-cache
+docker-compose up -d
+docker-compose logs -f logwatcher
+
+docker-compose down
+docker-compose up -d
+docker-compose logs -f logwatcher
