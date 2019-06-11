@@ -1,6 +1,6 @@
 (function (window) {
   var lmu = window.lmu = {};
-  lmu.init = function(onlyLogger) {
+  lmu.init = function(logID, onlyLogger) {
     var EventNextIterationCode = String.fromCharCode({{.EventNextIterationCode}});
     var EventOnDataCode = String.fromCharCode({{.EventOnDataCode}});
     var EventLogRemovedCode = String.fromCharCode({{.EventLogRemovedCode}});
@@ -29,10 +29,10 @@
         return false;
       }
       if (!onlyLogger) {
-        lmu.readerWs = new WebSocket("{{.WsBaseUrl}}/listeners/20022");
-        lmu.writerWs = new WebSocket("{{.WsBaseUrl}}/loggers/20022");
+        lmu.readerWs = new WebSocket("{{.WsBaseUrl}}/listeners/" + logID);
+        lmu.writerWs = new WebSocket("{{.WsBaseUrl}}/loggers/" + logID);
       } else {
-        lmu.readerWs = new WebSocket("{{.WsBaseUrl}}/loggers/20022");
+        lmu.readerWs = new WebSocket("{{.WsBaseUrl}}/loggers/" + logID);
         lmu.writerWs = lmu.readerWs;
       }
       lmu.readerWs.binaryType = 'blob'

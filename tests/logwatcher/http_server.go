@@ -90,6 +90,8 @@ func (hs *HttpServer) Init() {
 	}
 	hs.router.HandleFunc("/logger", hs.loggerHome)
 	hs.router.HandleFunc("/listener", hs.listenerHome)
+	hs.router.HandleFunc("/logger/{logID}", hs.loggerHome)
+	hs.router.HandleFunc("/listener/{logID}", hs.listenerHome)
 	hs.router.HandleFunc("/app.js", hs.jsScript)
 	hs.router.HandleFunc("/loggers/{logID}", LoggerWebsocket)
 	hs.router.HandleFunc("/listeners/{logID}", ListenerWebsocket)
@@ -171,6 +173,11 @@ func (hs *HttpServer) Start() {
 }
 
 func (hs *HttpServer) loggerHome(w http.ResponseWriter, r *http.Request) {
+	logID := chi.URLParam(r, "logID")
+	if logID == "" {
+		logID = "20022"
+	}
+	// fmt.Println("logID :", logID)
 	/* ======================= for test start ======================= */
 	loggerHomeHtmlTmp, _ := ioutil.ReadFile(filepath.Join(hs.webPath, "logwatcher/logger.html"))
 	loggerHomeTemplate = template.Must(template.New("").Parse(string(loggerHomeHtmlTmp)))
@@ -179,11 +186,13 @@ func (hs *HttpServer) loggerHome(w http.ResponseWriter, r *http.Request) {
 		w,
 		struct {
 			WsBaseUrl              string
+			LogID                  string
 			EventNextIterationCode byte
 			EventOnDataCode        byte
 			EventLogRemovedCode    byte
 		}{
 			"ws://" + r.Host,
+			logID,
 			EventNextIterationCode,
 			EventOnDataCode,
 			EventLogRemovedCode,
@@ -192,6 +201,11 @@ func (hs *HttpServer) loggerHome(w http.ResponseWriter, r *http.Request) {
 }
 
 func (hs *HttpServer) listenerHome(w http.ResponseWriter, r *http.Request) {
+	logID := chi.URLParam(r, "logID")
+	if logID == "" {
+		logID = "20022"
+	}
+	// fmt.Println("logID :", logID)
 	/* ======================= for test start ======================= */
 	listenerHomeHtmlTmp, _ := ioutil.ReadFile(filepath.Join(hs.webPath, "logwatcher/listener.html"))
 	listenerHomeTemplate = template.Must(template.New("").Parse(string(listenerHomeHtmlTmp)))
@@ -200,11 +214,13 @@ func (hs *HttpServer) listenerHome(w http.ResponseWriter, r *http.Request) {
 		w,
 		struct {
 			WsBaseUrl              string
+			LogID                  string
 			EventNextIterationCode byte
 			EventOnDataCode        byte
 			EventLogRemovedCode    byte
 		}{
 			"ws://" + r.Host,
+			logID,
 			EventNextIterationCode,
 			EventOnDataCode,
 			EventLogRemovedCode,
