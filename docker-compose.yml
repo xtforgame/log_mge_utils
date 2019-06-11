@@ -7,7 +7,7 @@ services:
       dockerfile: ./Dockerfile
 
     container_name: logwatcher
-    command: ["/usr/bin/logwatcher", "/usr/logwatcher/tmp"]
+    command: ["/usr/bin/logwatcher", "/usr/logwatcher/log-data"]
 
     # environment:
     #   XXXXX: "yes"
@@ -16,4 +16,4 @@ services:
       - "8080:8080"
 
     volumes:
-      - "./tmp:/usr/logwatcher/tmp"
+      - "./tmp:/usr/logwatcher/log-data"
