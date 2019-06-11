@@ -20,7 +20,9 @@ go fmt ./...&&go run -v -mod=vendor main/logwatcher_client.go
 
 
 bash ./docker/bin/build_logwatcher.sh
-bash ./docker/alpine3.9/build_logwatcher.sh
+
+bash ./docker/alpine3.9/build_logwatcher.sh \
+&& cp -rf ./build/alpine3.9/logwatcher ./dist/alpine3.9/logwatcher/logwatcher
 
 
 docker-compose down

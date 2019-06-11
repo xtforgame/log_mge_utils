@@ -7,11 +7,12 @@ package logwatcher
 
 import (
 	// "bytes"
-	// "encoding/json"
+	"encoding/json"
 	"fmt"
 	"github.com/go-chi/chi"
 	"html/template"
 	// funk "github.com/thoas/go-funk"
+	"github.com/xtforgame/log_mge_utils/fshelper"
 	"github.com/xtforgame/log_mge_utils/httpserver"
 	"net/http"
 	// "sort"
@@ -40,6 +41,13 @@ func FileServer(r chi.Router, path string, root http.FileSystem) {
 	}))
 }
 
+type WatcherStats struct {
+	Name    string `json:"name,"`
+	Logs    int64  `json:"logs,omitempty"`
+	Error   string `json:"error,omitempty"`
+	LogSize int64  `json:"logSize,omitempty"`
+}
+
 type HttpServer struct {
 	logPath string
 	webPath string
@@ -60,6 +68,22 @@ func NewHttpServer(logPath string, webPath string) *HttpServer {
 	}
 }
 
+func GetWatcherInfo(watcherPath string, watcherName string) (*WatcherStats, error) {
+	logList, err := fshelper.ListDir(watcherPath)
+	if err != nil {
+		return nil, err
+	}
+	var totalSize int64
+	for _, fileInfo := range logList.Files {
+		totalSize += fileInfo.Size()
+	}
+	return &WatcherStats{
+		Name:    watcherName,
+		Logs:    int64(len(logList.Files)),
+		LogSize: totalSize,
+	}, nil
+}
+
 func (hs *HttpServer) Init() {
 	if LoggerHeplerInst == nil {
 		LoggerHeplerInst = CreateLoggerHepler(hs.logPath)
@@ -75,8 +99,62 @@ func (hs *HttpServer) Init() {
 		w.Write([]byte("welcome"))
 	})
 
-	hs.router.Get("/reg", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("welcome"))
+	hs.router.Route("/stats", func(r chi.Router) {
+		r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+			watchersFolder := filepath.Join(hs.logPath, "log-watcher")
+			watcherList, err := fshelper.ListDir(watchersFolder)
+			stats := []*WatcherStats{}
+			for _, fileInfo := range watcherList.Dirs {
+				watcherStats, err := GetWatcherInfo(filepath.Join(watchersFolder, fileInfo.Name()), fileInfo.Name())
+				if err != nil {
+					stats = append(stats, &WatcherStats{
+						Name:  fileInfo.Name(),
+						Error: err.Error(),
+					})
+				} else {
+					stats = append(stats, watcherStats)
+				}
+			}
+			if err != nil {
+				fmt.Println("err :", err)
+				w.WriteHeader(http.StatusInternalServerError)
+				w.Write([]byte("500 - Log directory is not accessible"))
+				return
+			}
+			if jsonBytes, err := json.Marshal(stats); err == nil {
+				w.Write(jsonBytes)
+			} else {
+				w.WriteHeader(http.StatusInternalServerError)
+				w.Write([]byte("500 - Internal Server Error"))
+				return
+			}
+			// w.Write([]byte("[]"))
+		})
+
+		r.Get("/{logID:[0-9a-zA-Z_-]+}", func(w http.ResponseWriter, r *http.Request) {
+			logID := chi.URLParam(r, "logID")
+			watcherFolder := filepath.Join(hs.logPath, "log-watcher", logID)
+			watcherStats, err := GetWatcherInfo(watcherFolder, logID)
+			if err != nil {
+				w.WriteHeader(http.StatusNotFound)
+				w.Write([]byte("404 - Not Found"))
+			} else {
+				if jsonBytes, err := json.Marshal(watcherStats); err == nil {
+					w.Write(jsonBytes)
+				} else {
+					w.WriteHeader(http.StatusInternalServerError)
+					w.Write([]byte("500 - Internal Server Error"))
+					return
+				}
+				return
+			}
+		})
+
+		r.Delete("/{logID:[0-9a-zA-Z_-]+}", func(w http.ResponseWriter, r *http.Request) {
+			logID := chi.URLParam(r, "logID")
+			LoggerHeplerInst.ForceRemoveLogger(logID)
+			w.Write([]byte("{\"result\":\"done\"}"))
+		})
 	})
 }
 

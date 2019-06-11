@@ -15,8 +15,8 @@ docker run --rm -ti \
 echo "Build docker image xtforgame/logwatcher:latest"
 docker build --rm -t xtforgame/logwatcher:latest -f docker/alpine3.9/logwatcher/Dockerfile .
 
-docker run --rm -ti \
-  -p 8080:8080 \
-  -v $(pwd)/tmp:/usr/logwatcher/tmp \
-  -w /usr/logwatcher \
-  xtforgame/logwatcher:latest logwatcher /usr/logwatcher/tmp
+# docker run --rm -ti \
+#   -p 8080:8080 \
+#   -v $(pwd)/tmp:/usr/logwatcher/tmp \
+#   -w /usr/logwatcher \
+#   xtforgame/logwatcher:latest logwatcher /usr/logwatcher/tmp

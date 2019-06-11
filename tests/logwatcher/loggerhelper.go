@@ -77,6 +77,11 @@ func (lh *LoggerHepler) RemoveAndCloseLogger(logName string) {
 	lh.loggersMu.Unlock()
 }
 
+func (lh *LoggerHepler) ForceRemoveLogger(logName string) {
+	lh.CreateOrGetLogger(logName)
+	lh.RemoveAndCloseLogger(logName)
+}
+
 func (lh *LoggerHepler) Close() {
 	lh.loggersMu.Lock()
 	for k, v := range lh.loggers {
